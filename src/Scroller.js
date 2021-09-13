@@ -173,11 +173,15 @@ export default class CalendarScroller extends Component {
     } = this.props;
     const data = [];
     let _newStartDate = newStartDate;
+    let _prevVisIndex;
     if (minDate && newStartDate.isBefore(minDate, "day")) {
       _newStartDate = moment(minDate);
     }
     for (let i = 0; i < this.state.numDays; i++) {
       let date = _newStartDate.clone().add(i, "days");
+      if (date.isSame(prevVisStart, "day")) {
+        _prevVisIndex = i;
+      }
       if (maxDate && date.isAfter(maxDate, "day")) {
         break;
       }
@@ -187,25 +191,20 @@ export default class CalendarScroller extends Component {
     if (data.length < this.props.maxSimultaneousDays) {
       return;
     }
-
-    // Scroll to previous date
-    for (let i = 0; i < data.length; i++) {
-      if (data[i].date.isSame(prevVisStart, "day")) {
-        this.shifting = true;
-        this.rlv.scrollToIndex(i, false);
-        // RecyclerListView sometimes returns position to old index after
-        // moving to the new one. Set position again after delay.
-        this.timeoutResetPositionId = setTimeout(() => {
-          this.timeoutResetPositionId = null;
-          this.rlv.scrollToIndex(i, false);
-          this.shifting = false; // debounce
-        }, 800);
-        break;
-      }
-    }
     this.setState({
       data,
       dataProvider: this.dataProvider.cloneWithRows(data),
+    }, () => {
+      // Scroll to previous date
+      this.shifting = true;
+      this.rlv.scrollToIndex(_prevVisIndex, false);
+      // RecyclerListView sometimes returns position to old index after
+      // moving to the new one. Set position again after delay.
+      this.timeoutResetPositionId = setTimeout(() => {
+        this.timeoutResetPositionId = null;
+        this.rlv.scrollToIndex(_prevVisIndex, false);
+        this.shifting = false; // debounce
+      }, 800);
     });
   }
 
